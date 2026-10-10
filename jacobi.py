@@ -1,30 +1,40 @@
-import math
+import numpy as np
+from general import build_system, X0, TOL, MAX_ITER
 
-def f(L):
-    return (
-        100 * math.exp(-((L - 1) / 0.25)**2)
-        + 10 * (math.exp(3 * (L - 1)) - 1)
-        - 70
-    )
+def jacobi(A, b, x0, tol, max_iter):
+    n = len(b)
+    x = x0.copy()
+    hist = []
 
-L = 0.8
-tolerance = 1e-6  # percent
-max_iterations = 1000
+    for k in range(1, max_iter + 1):
+        x_new = np.zeros(n)
 
-print("Jacobi-style Fixed-Point Iteration")
-print("k\tL\t\tf(L)\t\tRelative Error (%)")
+        for i in range(n):
+            s = sum(A[i, j] * x[j] for j in range(n) if j != i)   # pake x lama
+            x_new[i] = (b[i] - s) / A[i, i]
 
-for k in range(1, max_iterations + 1):
-    old_L = L
-    L = old_L - 0.005 * f(old_L)
+        err = np.max(np.abs(x_new - x))
+        hist.append((k, x_new.copy(), err))
+        x = x_new
 
-    error = abs((L - old_L) / L) * 100
+        if err < tol:
+            return x, hist, True
+    return x, hist, False
 
-    print(f"{k}\t{L:.10f}\t{f(L):.6e}\t{error:.6e}")
+if __name__ == "__main__":
+    A, b = build_system()
 
-    if error < tolerance:
-        break
+    print("JACOBI METHOD")
+    print("Initial guess :", X0)
+    print("Tolerance    :", TOL)
+    print("Iterasi max :", MAX_ITER, "\n")
+    print(f"{'k':>3} {'x1':>11} {'x2':>11} {'x3':>11} {'x4':>11} {'error':>12}")
 
-print("\nFinal solution:", L)
-print("Iterations:", k)
-print("Final residual:", f(L))
+    x, hist, ok = jacobi(A, b, X0, TOL, MAX_ITER)
+
+    for k, v, e in hist:
+        print(f"{k:>3} {v[0]:>11.6f} {v[1]:>11.6f} {v[2]:>11.6f} {v[3]:>11.6f} {e:>12.3e}")
+
+    print("\nKonvergen  :", "Ya" if ok else "Tidak", f"({len(hist)} iterasi)")
+    print("Solusi akhir:", np.round(x, 6))
+    print("Solusi eksak:", np.round(np.linalg.solve(A, b), 6))

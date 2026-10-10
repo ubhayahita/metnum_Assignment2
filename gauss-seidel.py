@@ -1,32 +1,38 @@
-import math
+import numpy as np
+from general import build_system, X0, TOL, MAX_ITER
 
-def f(L):
-    return (
-        100 * math.exp(-((L - 1) / 0.25)**2)
-        + 10 * (math.exp(3 * (L - 1)) - 1)
-        - 70
-    )
+def gauss_seidel(A, b, x0, tol, max_iter):
+    n = len(b)
+    x = x0.copy()
+    hist = [] #history
 
-L = 0.8
-tolerance = 1e-6  # percent
-max_iterations = 1000
+    for k in range(1, max_iter + 1):
+        x_old = x.copy()
 
-print("Gauss-Seidel-style Fixed-Point Iteration")
-print("k\tL\t\tf(L)\t\tRelative Error (%)")
+        for i in range(n):
+            s = sum(A[i, j] * x[j] for j in range(n) if j != i)   # x terbaru langsung dipakai
+            x[i] = (b[i] - s) / A[i, i]
 
-for k in range(1, max_iterations + 1):
-    old_L = L
+        err = np.max(np.abs(x - x_old))
+        hist.append((k, x.copy(), err))
 
-    # Use the latest available value of L
-    L = L - 0.005 * f(L)
+        if err < tol:
+            return x, hist, True
+    return x, hist, False
 
-    error = abs((L - old_L) / L) * 100
+if __name__ == "__main__":
+    A, b = build_system()
 
-    print(f"{k}\t{L:.10f}\t{f(L):.6e}\t{error:.6e}")
+    print("GAUSS-SEIDEL METHOD")
+    print("Initial guess:", X0)
+    print("Tolerance    :", TOL)
+    print("Iterasi max  :", MAX_ITER, "\n")
+    print(f"{'k':>3} {'x1':>11} {'x2':>11} {'x3':>11} {'x4':>11} {'error':>12}")
 
-    if error < tolerance:
-        break
+    x, hist, ok = gauss_seidel(A, b, X0, TOL, MAX_ITER)
 
-print("\nFinal solution:", L)
-print("Iterations:", k)
-print("Final residual:", f(L))
+    for k, v, e in hist:
+        print(f"{k:>3} {v[0]:>11.6f} {v[1]:>11.6f} {v[2]:>11.6f} {v[3]:>11.6f} {e:>12.3e}")
+    print("\nKonvergen  :", "Ya" if ok else "Tidak", f"({len(hist)} iterasi)")
+    print("Solusi akhir:", np.round(x, 6))
+    print("Solusi eksak:", np.round(np.linalg.solve(A, b), 6))
